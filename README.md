@@ -1,5 +1,5 @@
 # testes-unitarios
-Atividade da disciplina de Testes Unitários
+Atividade da disciplina de Testes Unitários realizada pelo aluno Robson Antonio França Souza
 
 # Como Executrar
 1. Primeiro, baixar ou clonar o projeto e ter certeza que os dois arquivos estão na raíz do projeto
