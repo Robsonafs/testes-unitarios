@@ -2,7 +2,7 @@
 Atividade da disciplina de Testes Unitários
 
 # Como Executrar
-1. Proimeiro, baixar ou clonar o projeto e ter certeza que os dois arquivos estão na raís do projeto
+1. Primeiro, baixar ou clonar o projeto e ter certeza que os dois arquivos estão na raíz do projeto
 
 2. Se ainda não tiver o pytest instalado, rode o comando: pip install pytest
 
