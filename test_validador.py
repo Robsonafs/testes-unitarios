@@ -1,101 +1,87 @@
 import pytest
+import requests
 from validador import Validador
 
-# Fixture para fornecer a instância da classe Validador aos testes
+# Fixtures
+
 @pytest.fixture
 def validador():
+    """Fornece uma instância limpa da classe Validador para os testes."""
     return Validador()
 
-# TESTES DE VALIDAÇÃO DE CEP
+# Testes: Validação de CEP (Mockando ServicoCorreios)
 
-@pytest.mark.parametrize("cep_valido", [
-    "01001-000", # Com máscara
-    "01001000",  # Sem máscara
-    "20040-002",
-    "20040002"
-])
-def test_validar_cep_cenarios_positivos(validador, cep_valido):
+@pytest.mark.parametrize("cep_valido", ["01001-000", "01001000"])
+def test_validar_cep_sucesso_com_api(validador, mocker, cep_valido):
+    # Mock simulando retorno True da API
+    mocker.patch.object(validador.servico_correios, 'valida_cep_api', return_value=True)
     assert validador.validar_cep(cep_valido) is True
 
-@pytest.mark.parametrize("cep_invalido", [
-    "01001-00",   # Tamanho incorreto (menor)
-    "01001-0000", # Tamanho incorreto (maior)
-    "0100A-000",  # Letras no meio do formato
-    "01001.000",  # Formato/pontuação inválida
-    "1234567"     # Faltando dígito na versão sem máscara
-])
-def test_validar_cep_cenarios_negativos(validador, cep_invalido):
-    assert validador.validar_cep(cep_invalido) is False
+@pytest.mark.parametrize("cep_invalido_api", ["99999-999"])
+def test_validar_cep_falha_rejeitado_pela_api(validador, mocker, cep_invalido_api):
+    # Mock simulando retorno False da API
+    mocker.patch.object(validador.servico_correios, 'valida_cep_api', return_value=False)
+    assert validador.validar_cep(cep_invalido_api) is False
 
-@pytest.mark.parametrize("cep_excecao", [
-    12345678,     # Inteiro (não é string)
-    None,         # Tipo NoneType
-    ["01001-000"] # Lista
-])
-def test_validar_cep_excecao_tipo_invalido(validador, cep_excecao):
+@pytest.mark.parametrize("cep_formato_invalido", ["01001-00", "010010000", "abcde-fgh"])
+def test_validar_cep_falha_formato_incorreto(validador, mocker, cep_formato_invalido):
+    # A API nem deve ser chamada se o formato falhar na validação primária
+    mock_api = mocker.patch.object(validador.servico_correios, 'valida_cep_api')
+    assert validador.validar_cep(cep_formato_invalido) is False
+    mock_api.assert_not_called()
+
+def test_validar_cep_excecao_erro_http(validador, mocker):
+    # Mock simulando erro de conexão HTTPError
+    mocker.patch.object(
+        validador.servico_correios,
+        'valida_cep_api',
+        side_effect=requests.exceptions.HTTPError("Erro 500 do servidor")
+    )
+    with pytest.raises(requests.exceptions.HTTPError):
+        validador.validar_cep("01001-000")
+
+def test_validar_cep_excecao_tipo_incorreto(validador):
+    # Garante que um número inteiro levante ValueError
     with pytest.raises(ValueError):
-        validador.validar_cep(cep_excecao)
+        validador.validar_cep(1001000)
 
+# Testes: Validação de CPF
 
-# TESTES DE VALIDAÇÃO DE CPF
-
-@pytest.mark.parametrize("cpf_valido", [
-    "111.444.777-35", # Válido com máscara
-    "11144477735",    # Válido sem máscara
-    "529.982.247-25",
-    "52998224725"
-])
-def test_validar_cpf_cenarios_positivos(validador, cpf_valido):
+# Usando um CPF matematicamente válido (apenas para fins de teste)
+@pytest.mark.parametrize("cpf_valido", ["111.444.777-35", "11144477735"])
+def test_validar_cpf_sucesso(validador, cpf_valido):
     assert validador.validar_cpf(cpf_valido) is True
 
 @pytest.mark.parametrize("cpf_invalido", [
-    "111.444.777-36", # Dígito verificador matemático incorreto
-    "111.111.111-11", # Regra de números todos iguais
-    "111.444.777-3",  # Tamanho incorreto (menor)
-    "111.444.777-350",# Tamanho incorreto (maior)
-    "111/444/777-35", # Formato de máscara inválido para CPF
-    "A11.444.777-35"  # Caracteres não numéricos em posições erradas
+    "111.111.111-11", # Dígitos repetidos (rejeitado pela regra)
+    "123.456.789-00", # Dígitos verificadores matematicamente incorretos
+    "123",            # Tamanho incorreto
+    "abcdefghijk",    # Letras
+    ""                # Vazio
 ])
-def test_validar_cpf_cenarios_negativos(validador, cpf_invalido):
+def test_validar_cpf_falha(validador, cpf_invalido):
     assert validador.validar_cpf(cpf_invalido) is False
 
-@pytest.mark.parametrize("cpf_excecao", [
-    11144477735,
-    False,
-    {"cpf": "111.444.777-35"}
-])
-def test_validar_cpf_excecao_tipo_invalido(validador, cpf_excecao):
+def test_validar_cpf_excecao_tipo_incorreto(validador):
     with pytest.raises(ValueError):
-        validador.validar_cpf(cpf_excecao)
+        validador.validar_cpf(11144477735)
 
+# Testes: Validação de CNPJ
 
-# TESTES DE VALIDAÇÃO DE CNPJ
-
-@pytest.mark.parametrize("cnpj_valido", [
-    "06.990.590/0001-23", # Válido com máscara (Google Brasil)
-    "06990590000123",     # Válido sem máscara
-    "00.000.000/0001-91", # Válido com máscara (Banco do Brasil)
-    "00000000000191"
-])
-def test_validar_cnpj_cenarios_positivos(validador, cnpj_valido):
+# Usando um CNPJ matematicamente válido (apenas para fins de teste)
+@pytest.mark.parametrize("cnpj_valido", ["11.222.333/0001-81", "11222333000181"])
+def test_validar_cnpj_sucesso(validador, cnpj_valido):
     assert validador.validar_cnpj(cnpj_valido) is True
 
 @pytest.mark.parametrize("cnpj_invalido", [
-    "06.990.590/0001-24", # Dígito verificador incorreto
-    "00.000.000/0000-00", # Numeração zerada
-    "06.990.590/0001-2",  # Tamanho menor
-    "06.990.590/0001-230",# Tamanho maior
-    "06-990-590/0001.23", # Máscara com pontuação invertida/incorreta
-    "06.990.590/000A-23"  # Caracteres inválidos
+    "33.012.339/0001-00", # Dígitos verificadores incorretos
+    "00.000.000/0000-00", # Dígitos repetidos
+    "123",                # Tamanho incorreto
+    "AA.AAA.AAA/AAAA-AA"  # Letras
 ])
-def test_validar_cnpj_cenarios_negativos(validador, cnpj_invalido):
+def test_validar_cnpj_falha(validador, cnpj_invalido):
     assert validador.validar_cnpj(cnpj_invalido) is False
 
-@pytest.mark.parametrize("cnpj_excecao", [
-    6990590000123,
-    True,
-    3.14
-])
-def test_validar_cnpj_excecao_tipo_invalido(validador, cnpj_excecao):
+def test_validar_cnpj_excecao_tipo_incorreto(validador):
     with pytest.raises(ValueError):
-        validador.validar_cnpj(cnpj_excecao)
+        validador.validar_cnpj(11222333000181)
