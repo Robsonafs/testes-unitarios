@@ -1,77 +1,63 @@
 import re
+from servico_correios import ServicoCorreios
+
 
 class Validador:
-    def validar_cep(self, cep):
-        if not isinstance(cep, str):
-            raise ValueError("O valor fornecido deve ser do tipo texto (str).")
+    def __init__(self):
+        self.servico_correios = ServicoCorreios()
 
-        # Valida o formato exato com máscara (XXXXX-XXX) ou sem máscara (XXXXXXXX)
-        if not re.match(r'^\d{5}-?\d{3}$', cep):
+    def _limpar_entrada(self, valor):
+        if not isinstance(valor, str):
+            raise ValueError("A entrada deve ser uma string.")
+        return re.sub(r'[^0-9]', '', valor)
+
+    def _calcular_digito(self, digitos, pesos):
+        soma = sum(d * p for d, p in zip(digitos, pesos))
+        resto = soma % 11
+        return 0 if resto < 2 else 11 - resto
+
+    def validar_cep(self, cep):
+        cep_limpo = self._limpar_entrada(cep)
+
+        if len(cep_limpo) != 8:
             return False
 
-        return True
+        return self.servico_correios.valida_cep_api(cep_limpo)
 
     def validar_cpf(self, cpf):
-        if not isinstance(cpf, str):
-            raise ValueError("O valor fornecido deve ser do tipo texto (str).")
+        cpf_limpo = self._limpar_entrada(cpf)
 
-        # Valida o formato exato: com máscara (XXX.XXX.XXX-XX) ou sem máscara (11 dígitos)
-        if not re.match(r'(^\d{3}\.\d{3}\.\d{3}-\d{2}$)|(^\d{11}$)', cpf):
+        if len(cpf_limpo) != 11 or cpf_limpo == cpf_limpo[0] * 11:
             return False
 
-        # Remove a máscara para calcular os dígitos
-        numeros = re.sub(r'[^0-9]', '', cpf)
+        digitos = [int(d) for d in cpf_limpo]
 
-        # Rejeita CPFs conhecidos por terem todos os números iguais (ex: 111.111.111-11)
-        if len(set(numeros)) == 1:
+        dv1 = self._calcular_digito(digitos[:9], list(range(10, 1, -1)))
+        if dv1 != digitos[9]:
             return False
 
-        # Cálculo do primeiro dígito verificador
-        soma_d1 = sum(int(numeros[i]) * (10 - i) for i in range(9))
-        d1 = 11 - (soma_d1 % 11)
-        d1 = 0 if d1 >= 10 else d1
-        if int(numeros[9]) != d1:
-            return False
-
-        # Cálculo do segundo dígito verificador
-        soma_d2 = sum(int(numeros[i]) * (11 - i) for i in range(10))
-        d2 = 11 - (soma_d2 % 11)
-        d2 = 0 if d2 >= 10 else d2
-        if int(numeros[10]) != d2:
+        dv2 = self._calcular_digito(digitos[:10], list(range(11, 1, -1)))
+        if dv2 != digitos[10]:
             return False
 
         return True
 
     def validar_cnpj(self, cnpj):
-        if not isinstance(cnpj, str):
-            raise ValueError("O valor fornecido deve ser do tipo texto (str).")
+        cnpj_limpo = self._limpar_entrada(cnpj)
 
-        # Valida o formato exato: com máscara (XX.XXX.XXX/XXXX-XX) ou sem (14 dígitos)
-        if not re.match(r'(^\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}$)|(^\d{14}$)', cnpj):
+        if len(cnpj_limpo) != 14 or cnpj_limpo == cnpj_limpo[0] * 14:
             return False
 
-        # Remove a máscara
-        numeros = re.sub(r'[^0-9]', '', cnpj)
+        digitos = [int(d) for d in cnpj_limpo]
 
-        # Rejeita CNPJs com todos os números iguais
-        if len(set(numeros)) == 1:
+        pesos_1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+        dv1 = self._calcular_digito(digitos[:12], pesos_1)
+        if dv1 != digitos[12]:
             return False
 
-        pesos_d1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
-        pesos_d2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
-
-        # Cálculo do primeiro dígito verificador
-        soma_d1 = sum(int(numeros[i]) * pesos_d1[i] for i in range(12))
-        d1 = 11 - (soma_d1 % 11)
-        d1 = 0 if d1 >= 10 else d1
-        if int(numeros[12]) != d1:
-            return False
-
-        # Cálculo do segundo dígito verificador
-        soma_d2 = sum(int(numeros[i]) * pesos_d2[i] for i in range(13))
-        d2 = 11 - (soma_d2 % 11)
-        d2 = 0 if d2 >= 10 else d2
-        if int(numeros[13]) != d2:
+        pesos_2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+        dv2 = self._calcular_digito(digitos[:13], pesos_2)
+        if dv2 != digitos[13]:
             return False
 
         return True
