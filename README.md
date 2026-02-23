@@ -16,4 +16,9 @@ No terminal, execute o seguinte comando na raiz do projeto:
 
 ```bash
 pip install pytest pytest-mock pytest-cov requests
+```
 
+## Para executar os testes direto do terminal, rodar esse comando
+```bash
+pytest test_validador.py -v
+```
