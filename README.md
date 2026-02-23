@@ -22,4 +22,3 @@ pip install pytest pytest-mock pytest-cov requests
 ```bash
 pytest test_validador.py -v
 ```
-## Forçando os tests
