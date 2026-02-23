@@ -1,9 +1,19 @@
 # testes-unitarios
 Atividade da disciplina de Testes Unitários realizada pelo aluno: **Robson Antonio França Souza**
 
-# Como Executrar
-1. Primeiro, baixar ou clonar o projeto e ter certeza que os dois arquivos estão na raíz do projeto
+## Estrutura do Projeto
+- `validador.py`: Contém a lógica principal de validação de formatos.
+- `servico_correios.py`: Classe responsável por simular o consumo de uma API externa para CEP.
+- `test_validador.py`: Suíte de testes automatizados com `pytest` e `pytest-mock`.
+- `.github/workflows/ci.yml`: Configuração do pipeline CI/CD no GitHub Actions.
 
-2. Se ainda não tiver o pytest instalado, rode o comando: `pip install pytest`
+## Requisitos
+- Python 3.8+
+- Gerenciador de pacotes `pip`
 
-3. Para rodar os testes e ver o resultado detalhado dos testes unitários, basta executar o comando no terminal, na mesma pasta dos arquivos: `pytest -v test_validador.py`
+## Como instalar as dependências
+No terminal, execute o seguinte comando na raiz do projeto:
+
+```bash
+pip install pytest pytest-mock pytest-cov requests
+
